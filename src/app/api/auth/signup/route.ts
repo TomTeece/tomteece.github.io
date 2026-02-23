@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { jsonError } from "@/lib/api";
+import { seedDefaultMetrics } from "@/lib/services/default-metrics";
 
 const signupSchema = z.object({
   username: z
@@ -46,6 +47,8 @@ export async function POST(request: Request) {
         id: true
       }
     });
+
+    await seedDefaultMetrics(user.id).catch(() => {});
 
     return NextResponse.json({ userId: user.id }, { status: 201 });
   } catch (error) {

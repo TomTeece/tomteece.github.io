@@ -6,9 +6,11 @@ import type { CompletionSnapshot } from "@/lib/services/plan-completion";
 import type { NotesSnapshot } from "@/lib/services/plan-notes";
 import {
   compactCompletionContext,
+  compactMetricsContext,
   compactNotesContext,
   compactOnboardingContext
 } from "@/lib/services/plan-chat-context";
+import type { MetricsSnapshot } from "@/lib/services/plan-chat-context";
 import {
   loadTrainingContext,
   resolvePlanDiscipline
@@ -24,6 +26,7 @@ type GeneratePlanChatReplyInput = {
   planJson: Record<string, unknown>;
   completion: CompletionSnapshot;
   notes: NotesSnapshot;
+  metricsSnapshot: MetricsSnapshot;
   history: PlanChatHistoryItem[];
   userMessage: string;
 };
@@ -44,6 +47,7 @@ export function buildPlanChatMessages(params: {
   planJson: Record<string, unknown>;
   completion: CompletionSnapshot;
   notes: NotesSnapshot;
+  metricsSnapshot: MetricsSnapshot;
   history: PlanChatHistoryItem[];
   userMessage: string;
 }): LlmMessage[] {
@@ -53,6 +57,10 @@ export function buildPlanChatMessages(params: {
     : "No onboarding response saved yet for this plan. Ask concise clarifying questions when needed.";
   const completionSummary = JSON.stringify(compactCompletionContext(params.completion), null, 2);
   const notesSummary = JSON.stringify(compactNotesContext(params.notes, params.completion), null, 2);
+  const metricsSummary =
+    params.metricsSnapshot.length > 0
+      ? JSON.stringify(compactMetricsContext(params.metricsSnapshot), null, 2)
+      : "No progress metrics recorded yet.";
 
   const messages: LlmMessage[] = [
     {
@@ -80,6 +88,10 @@ export function buildPlanChatMessages(params: {
     {
       role: "system",
       content: `Notes context:\n${notesSummary}`
+    },
+    {
+      role: "system",
+      content: `Progress metrics (latest recorded values):\n${metricsSummary}`
     },
     {
       role: "system",
@@ -117,6 +129,7 @@ export async function generatePlanChatReply(input: GeneratePlanChatReplyInput): 
     planJson: input.planJson,
     completion: input.completion,
     notes: input.notes,
+    metricsSnapshot: input.metricsSnapshot,
     history: input.history,
     userMessage: input.userMessage
   });
@@ -166,6 +179,7 @@ export async function* streamPlanChatReply(
     planJson: input.planJson,
     completion: input.completion,
     notes: input.notes,
+    metricsSnapshot: input.metricsSnapshot,
     history: input.history,
     userMessage: input.userMessage
   });

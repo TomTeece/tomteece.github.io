@@ -10,6 +10,7 @@ import { getLlmClientFromEnv } from "@/lib/services/llm";
 import { normalizeLlmError } from "@/lib/services/llm/error-details";
 import { buildGenerationMessages } from "@/lib/services/prompt-builder";
 import { loadTrainingContext } from "@/lib/services/training-context";
+import type { MetricsSnapshot } from "@/lib/services/plan-chat-context";
 
 const MAX_ATTEMPTS = 2;
 
@@ -55,7 +56,8 @@ export function buildOpenAIRequest(
 }
 
 export async function generateTrainingPlan(
-  questionnaire: QuestionnaireInput
+  questionnaire: QuestionnaireInput,
+  metricsSnapshot?: MetricsSnapshot
 ): Promise<PlanGenerationSuccess> {
   const env = getEnv();
   const { client, model } = getLlmClientFromEnv();
@@ -67,6 +69,7 @@ export async function generateTrainingPlan(
     const messages = buildGenerationMessages({
       trainingContext: context,
       questionnaire,
+      metricsSnapshot,
       correctionFeedback
     });
 

@@ -6,6 +6,29 @@ import { requireUserId } from "@/lib/server/auth-guard";
 import { PlanChatError, generatePlanChatReply, streamPlanChatReply } from "@/lib/services/plan-chat";
 import { getCompletionSnapshot } from "@/lib/services/plan-completion";
 import { getNotesSnapshot } from "@/lib/services/plan-notes";
+import type { MetricsSnapshot } from "@/lib/services/plan-chat-context";
+
+async function getMetricsSnapshot(userId: string): Promise<MetricsSnapshot> {
+  const definitions = await prisma.metricDefinition.findMany({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+    include: {
+      entries: {
+        orderBy: { recordedAt: "desc" },
+        take: 1
+      }
+    }
+  });
+
+  return definitions
+    .filter((d) => d.entries.length > 0)
+    .map((d) => ({
+      name: d.name,
+      unit: d.unit,
+      latestValue: d.entries[0].value,
+      recordedAt: d.entries[0].recordedAt.toISOString()
+    }));
+}
 
 const postSchema = z.object({
   content: z.string().min(1).max(4000),
@@ -154,7 +177,7 @@ export async function POST(
       }
     });
 
-    const [completion, notes] = await Promise.all([
+    const [completion, notes, metricsSnapshot] = await Promise.all([
       getCompletionSnapshot({
         userId,
         trainingPlanId: thread.trainingPlanId,
@@ -165,7 +188,8 @@ export async function POST(
         userId,
         trainingPlanId: thread.trainingPlanId,
         planVersionId: thread.planVersionId
-      })
+      }),
+      getMetricsSnapshot(userId)
     ]);
 
     if (wantsStream) {
@@ -216,6 +240,7 @@ export async function POST(
                   planJson: thread.planVersion.planJson as Record<string, unknown>,
                   completion,
                   notes,
+                  metricsSnapshot,
                   history: history.map((item) => ({
                     role: item.role,
                     content: item.content
@@ -245,6 +270,7 @@ export async function POST(
                   planJson: thread.planVersion.planJson as Record<string, unknown>,
                   completion,
                   notes,
+                  metricsSnapshot,
                   history: history.map((item) => ({
                     role: item.role,
                     content: item.content
@@ -319,6 +345,7 @@ export async function POST(
       planJson: thread.planVersion.planJson as Record<string, unknown>,
       completion,
       notes,
+      metricsSnapshot,
       history: history.map((item) => ({
         role: item.role,
         content: item.content

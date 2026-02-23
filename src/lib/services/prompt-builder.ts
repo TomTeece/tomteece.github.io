@@ -1,5 +1,7 @@
 import type { QuestionnaireInput } from "@/lib/schemas/questionnaire";
 import type { LlmMessage } from "@/lib/services/llm/types";
+import type { MetricsSnapshot } from "@/lib/services/plan-chat-context";
+import { compactMetricsContext } from "@/lib/services/plan-chat-context";
 
 const COACHING_CONSTRAINTS = [
   "You are a conservative climbing coach.",
@@ -22,6 +24,7 @@ const COACHING_CONSTRAINTS = [
 export function buildGenerationMessages(params: {
   trainingContext: string;
   questionnaire: QuestionnaireInput;
+  metricsSnapshot?: MetricsSnapshot;
   correctionFeedback?: string;
 }): LlmMessage[] {
   const { age, ...questionnaireWithoutAge } = params.questionnaire;
@@ -29,6 +32,11 @@ export function buildGenerationMessages(params: {
     ...questionnaireWithoutAge,
     climbing_age_years: age
   };
+
+  const metricsContext =
+    params.metricsSnapshot && params.metricsSnapshot.length > 0
+      ? JSON.stringify(compactMetricsContext(params.metricsSnapshot), null, 2)
+      : null;
 
   const baseMessages: LlmMessage[] = [
     {
@@ -39,6 +47,14 @@ export function buildGenerationMessages(params: {
       role: "system",
       content: COACHING_CONSTRAINTS
     },
+    ...(metricsContext
+      ? [
+          {
+            role: "system" as const,
+            content: `Progress metrics (latest recorded values):\n${metricsContext}`
+          }
+        ]
+      : []),
     {
       role: "user",
       content: JSON.stringify(

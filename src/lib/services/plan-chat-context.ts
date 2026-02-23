@@ -1,6 +1,22 @@
 import type { CompletionSnapshot } from "@/lib/services/plan-completion";
 import type { NotesSnapshot } from "@/lib/services/plan-notes";
 
+export type MetricsSnapshot = {
+  name: string;
+  unit: string;
+  latestValue: number;
+  recordedAt: string;
+}[];
+
+type CompactedMetricsSummary = {
+  metrics: {
+    name: string;
+    value: string;
+    recorded: string;
+  }[];
+  body_weight_kg: number | null;
+};
+
 type OnboardingPayload = Record<string, unknown> | null;
 
 type CurrentFocus = {
@@ -179,5 +195,19 @@ export function compactNotesContext(notes: NotesSnapshot, completion: Completion
   return {
     sessions,
     activities
+  };
+}
+
+export function compactMetricsContext(metricsSnapshot: MetricsSnapshot): CompactedMetricsSummary {
+  const bodyWeightEntry = metricsSnapshot.find((m) => m.name === "Body Weight");
+  const bodyWeightKg = bodyWeightEntry ? bodyWeightEntry.latestValue : null;
+
+  return {
+    metrics: metricsSnapshot.map((m) => ({
+      name: m.name,
+      value: `${m.latestValue} ${m.unit}`,
+      recorded: m.recordedAt
+    })),
+    body_weight_kg: bodyWeightKg
   };
 }

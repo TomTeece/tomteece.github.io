@@ -26,6 +26,10 @@ describe("plan-chat service", () => {
         sessions: [],
         activities: []
       },
+      metricsSnapshot: [
+        { name: "Body Weight", unit: "kg", latestValue: 72, recordedAt: "2026-02-20T00:00:00.000Z" },
+        { name: "Finger Strength", unit: "kg", latestValue: 25, recordedAt: "2026-02-20T00:00:00.000Z" }
+      ],
       history: [
         {
           role: "user",
@@ -49,15 +53,16 @@ describe("plan-chat service", () => {
     expect(messages[4]?.role).toBe("system");
     expect(messages[5]?.role).toBe("system");
     expect(messages[6]?.role).toBe("system");
-    expect(messages[7]).toEqual({
+    expect(messages[7]?.role).toBe("system");
+    expect(messages[8]).toEqual({
       role: "user",
       content: "How should I pace this week?"
     });
-    expect(messages[8]).toEqual({
+    expect(messages[9]).toEqual({
       role: "assistant",
       content: "Keep intensity moderate in session 1."
     });
-    expect(messages[9]).toEqual({
+    expect(messages[10]).toEqual({
       role: "user",
       content: "What if my finger feels sore?"
     });
@@ -76,6 +81,12 @@ describe("plan-chat service", () => {
     expect(typeof notesContext).toBe("string");
     expect(notesContext as string).toContain("\"sessions\":");
     expect(notesContext as string).not.toContain("session_notes");
+
+    const metricsContext = messages[6]?.content;
+    expect(typeof metricsContext).toBe("string");
+    expect(metricsContext as string).toContain("Body Weight");
+    expect(metricsContext as string).toContain("Finger Strength");
+    expect(metricsContext as string).toContain("body_weight_kg");
 
     const coachingGuidance = messages[2]?.content;
     expect(typeof coachingGuidance).toBe("string");

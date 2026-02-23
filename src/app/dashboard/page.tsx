@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { CreatePlanButton } from "@/components/create-plan-button";
 import { GeneratePlanButton } from "@/components/generate-plan-button";
 import { DeletePlanButton } from "@/components/delete-plan-button";
+import { MetricsPanel } from "@/components/metrics-panel";
 
 export const metadata: Metadata = {
   robots: {
@@ -86,6 +87,8 @@ export default async function DashboardPage() {
           </ul>
         )}
       </section>
+
+      <MetricsPanel />
     </>
   );
 }

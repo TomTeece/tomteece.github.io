@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { questionnaireSchema } from "@/lib/schemas/questionnaire";
 import { generateTrainingPlan, PlanGenerationError } from "@/lib/services/plan-generator";
+import type { MetricsSnapshot } from "@/lib/services/plan-chat-context";
 
 type PlanGenerationJobRecord = {
   id: string;
@@ -214,7 +215,27 @@ export async function processPlanGenerationJob(jobId: string): Promise<void> {
     }
 
     const questionnaire = questionnaireSchema.parse(job.questionnaireResponse.data);
-    const generated = await generateTrainingPlan(questionnaire);
+
+    const metricDefinitions = await prisma.metricDefinition.findMany({
+      where: { userId: job.userId },
+      include: {
+        entries: {
+          orderBy: { recordedAt: "desc" },
+          take: 1
+        }
+      }
+    });
+
+    const metricsSnapshot: MetricsSnapshot = metricDefinitions
+      .filter((d: { entries: { value: number; recordedAt: Date }[] }) => d.entries.length > 0)
+      .map((d: { name: string; unit: string; entries: { value: number; recordedAt: Date }[] }) => ({
+        name: d.name,
+        unit: d.unit,
+        latestValue: d.entries[0].value,
+        recordedAt: d.entries[0].recordedAt.toISOString()
+      }));
+
+    const generated = await generateTrainingPlan(questionnaire, metricsSnapshot);
 
     const planName =
       typeof generated.planJson.plan_name === "string" && generated.planJson.plan_name.length > 0
